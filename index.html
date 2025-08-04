@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FUTRAVIF - Formulario de Solicitud</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <img src="img/logo.jpg" alt="Logo FUTRAVIF" class="logo">
+            <h1>Fundación Transformando Vidas para el Futuro</h1>
+            <h2>FUTRAVIF</h2>
+            <p class="subtitle">Formulario de Solicitud de Entrada</p>
+        </header>
+
+        <main class="main-content">
+            <form id="solicitudForm" class="form-container">
+                <!-- Información Personal del Estudiante -->
+                <section class="form-section">
+                    <h3>Datos Personales del Estudiante</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombreEstudiante">Nombre Completo *</label>
+                            <input type="text" id="nombreEstudiante" name="nombreEstudiante" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edadEstudiante">Edad *</label>
+                            <input type="number" id="edadEstudiante" name="edadEstudiante" min="15" max="25" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cedulaEstudiante">Cédula de Identidad *</label>
+                            <input type="text" id="cedulaEstudiante" name="cedulaEstudiante" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="telefonoEstudiante">Teléfono *</label>
+                            <input type="tel" id="telefonoEstudiante" name="telefonoEstudiante" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailEstudiante">Correo Electrónico *</label>
+                        <input type="email" id="emailEstudiante" name="emailEstudiante" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="direccion">Dirección Completa *</label>
+                        <textarea id="direccion" name="direccion" rows="3" required></textarea>
+                    </div>
+                </section>
+
+                <!-- Información Académica -->
+                <section class="form-section">
+                    <h3>Información Académica</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="liceo">Liceo donde estudia *</label>
+                            <input type="text" id="liceo" name="liceo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="grado">Grado/Año Escolar *</label>
+                            <select id="grado" name="grado" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="4to">4to de Bachillerato</option>
+                                <option value="5to">5to de Bachillerato</option>
+                                <option value="6to">6to de Bachillerato</option>
+                                <option value="graduado">Graduado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="indiceCalificaciones">Índice de Calificaciones *</label>
+                            <input type="number" id="indiceCalificaciones" name="indiceCalificaciones" 
+                                   min="0" max="100" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="universidadDeseada">Universidad a la que desea aplicar *</label>
+                            <input type="text" id="universidadDeseada" name="universidadDeseada" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="carreraDeseada">Carrera de Interés *</label>
+                        <input type="text" id="carreraDeseada" name="carreraDeseada" required>
+                    </div>
+                </section>
+
+                <!-- Información de los Padres -->
+                <section class="form-section">
+                    <h3>Información de los Padres o Tutores</h3>
+                    
+                    <!-- Padre/Tutor 1 -->
+                    <h4>Padre/Madre/Tutor 1</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombrePadre1">Nombre Completo *</label>
+                            <input type="text" id="nombrePadre1" name="nombrePadre1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edadPadre1">Edad</label>
+                            <input type="number" id="edadPadre1" name="edadPadre1" min="18" max="80">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cedulaPadre1">Cédula de Identidad *</label>
+                            <input type="text" id="cedulaPadre1" name="cedulaPadre1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="telefonoPadre1">Teléfono *</label>
+                            <input type="tel" id="telefonoPadre1" name="telefonoPadre1" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ocupacionPadre1">Ocupación</label>
+                            <input type="text" id="ocupacionPadre1" name="ocupacionPadre1">
+                        </div>
+                        <div class="form-group">
+                            <label for="ingresosPadre1">Ingresos Mensuales Aproximados</label>
+                            <input type="text" id="ingresosPadre1" name="ingresosPadre1" placeholder="Ej: 50,000">
+                        </div>
+                    </div>
+
+                    <!-- Padre/Tutor 2 -->
+                    <h4>Padre/Madre/Tutor 2 (Opcional)</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nombrePadre2">Nombre Completo</label>
+                            <input type="text" id="nombrePadre2" name="nombrePadre2">
+                        </div>
+                        <div class="form-group">
+                            <label for="edadPadre2">Edad</label>
+                            <input type="number" id="edadPadre2" name="edadPadre2" min="18" max="80">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cedulaPadre2">Cédula de Identidad</label>
+                            <input type="text" id="cedulaPadre2" name="cedulaPadre2">
+                        </div>
+                        <div class="form-group">
+                            <label for="telefonoPadre2">Teléfono</label>
+                            <input type="tel" id="telefonoPadre2" name="telefonoPadre2">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ocupacionPadre2">Ocupación</label>
+                            <input type="text" id="ocupacionPadre2" name="ocupacionPadre2">
+                        </div>
+                        <div class="form-group">
+                            <label for="ingresosPadre2">Ingresos Mensuales Aproximados</label>
+                            <input type="text" id="ingresosPadre2" name="ingresosPadre2" placeholder="Ej: 30,000">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Información Adicional -->
+                <section class="form-section">
+                    <h3>Información Adicional</h3>
+                    <div class="form-group">
+                        <label for="motivacion">¿Por qué deseas formar parte de FUTRAVIF? *</label>
+                        <textarea id="motivacion" name="motivacion" rows="4" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="situacionEconomica">Describe brevemente tu situación económica familiar</label>
+                        <textarea id="situacionEconomica" name="situacionEconomica" rows="3"></textarea>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="autorizacion" name="autorizacion" required>
+                        <label for="autorizacion">
+                            Autorizo el uso de mis datos personales para los fines de evaluación de esta solicitud *
+                        </label>
+                    </div>
+                </section>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">Enviar Solicitud</button>
+                    <button type="reset" class="btn-reset">Limpiar Formulario</button>
+                </div>
+            </form>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 2025 Fundación Transformando Vidas para el Futuro (FUTRAVIF)</p>
+            <p>Comprometidos con la educación y el futuro de nuestros jóvenes</p>
+        </footer>
+    </div>
+
+<script type="module" src="script.js"></script>
