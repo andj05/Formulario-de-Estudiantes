@@ -15,6 +15,14 @@ const firebaseConfig = {
     measurementId: "G-PZL2MHGXWK"
 };
 
+// Configuración de Cloudinary CORREGIDA
+const CLOUDINARY_CONFIG = {
+    cloudName: 'dqrrpxw3j',
+    apiKey: '462293412117268',
+    uploadPreset: 'ml_default', // Preset por defecto ahora configurado para unsigned
+    folder: 'futravif/records' // Carpeta donde se guardarán los archivos
+};
+
 // Inicializar Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -22,6 +30,7 @@ const analytics = getAnalytics(app);
 
 // Variables globales
 let isSubmitting = false;
+let uploadedFiles = []; // Array para almacenar los archivos subidos
 
 // Función para mostrar mensajes
 function showMessage(message, type = 'info') {
@@ -51,6 +60,245 @@ function showMessage(message, type = 'info') {
 
     // Scroll al mensaje
     messageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Función para validar archivos
+function validarArchivo(file) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!allowedTypes.includes(file.type)) {
+        return {
+            valid: false,
+            error: 'Solo se permiten archivos JPG, PNG y PDF'
+        };
+    }
+
+    if (file.size > maxSize) {
+        return {
+            valid: false,
+            error: 'El archivo no debe superar los 10MB'
+        };
+    }
+
+    return { valid: true };
+}
+
+// Función corregida para subir archivo a Cloudinary
+async function subirArchivoCloudinary(file) {
+    try {
+        console.log('📤 Subiendo archivo a Cloudinary:', file.name);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset); // Ahora sí existe
+        formData.append('folder', CLOUDINARY_CONFIG.folder);
+        // NO necesitas enviar api_key para uploads unsigned
+        
+        const response = await fetch(
+            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/upload`,
+            {
+                method: 'POST',
+                body: formData
+            }
+        );
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            console.error('Error response:', errorData);
+            throw new Error(`Error HTTP: ${response.status} - ${errorData}`);
+        }
+
+        const result = await response.json();
+        
+        console.log('✅ Archivo subido exitosamente:', result.secure_url);
+        
+        return {
+            success: true,
+            url: result.secure_url,
+            publicId: result.public_id,
+            originalName: file.name,
+            size: file.size,
+            type: file.type
+        };
+    } catch (error) {
+        console.error('❌ Error subiendo archivo:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+// Función para manejar la selección de archivos
+async function manejarSeleccionArchivos(event) {
+    const files = Array.from(event.target.files);
+    const filePreview = document.getElementById('filePreview');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    if (files.length === 0) return;
+
+    // Mostrar estado de carga
+    uploadStatus.innerHTML = '<div class="upload-loading">Procesando archivos...</div>';
+    uploadStatus.style.display = 'block';
+
+    // Validar y subir archivos
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const validation = validarArchivo(file);
+        
+        if (!validation.valid) {
+            showMessage(`Error en ${file.name}: ${validation.error}`, 'error');
+            continue;
+        }
+
+        // Crear elemento de preview
+        const fileItem = crearElementoPreview(file);
+        filePreview.appendChild(fileItem);
+
+        // Subir archivo
+        const uploadResult = await subirArchivoCloudinary(file);
+        
+        if (uploadResult.success) {
+            // Actualizar preview con éxito
+            actualizarPreviewExito(fileItem, uploadResult);
+            
+            // Guardar información del archivo
+            uploadedFiles.push({
+                originalName: file.name,
+                url: uploadResult.url,
+                publicId: uploadResult.publicId,
+                size: file.size,
+                type: file.type,
+                uploadDate: new Date().toISOString()
+            });
+        } else {
+            // Actualizar preview con error
+            actualizarPreviewError(fileItem, uploadResult.error);
+        }
+    }
+
+    // Actualizar estado final
+    actualizarEstadoFinal(uploadStatus);
+}
+
+// Función para crear elemento de preview
+function crearElementoPreview(file) {
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item uploading';
+    
+    const fileIcon = obtenerIconoArchivo(file.type);
+    const fileSize = formatearTamanoArchivo(file.size);
+    
+    fileItem.innerHTML = `
+        <div class="file-info">
+            <span class="file-icon">${fileIcon}</span>
+            <div class="file-details">
+                <span class="file-name">${file.name}</span>
+                <span class="file-size">${fileSize}</span>
+            </div>
+        </div>
+        <div class="file-status">
+            <div class="loading-spinner"></div>
+            <span>Subiendo...</span>
+        </div>
+    `;
+    
+    return fileItem;
+}
+
+// Función para actualizar preview con éxito
+function actualizarPreviewExito(fileItem, uploadResult) {
+    fileItem.className = 'file-item success';
+    const statusDiv = fileItem.querySelector('.file-status');
+    statusDiv.innerHTML = `
+        <span class="success-icon">✅</span>
+        <span>Subido</span>
+        <button class="btn-remove" onclick="removerArchivo('${uploadResult.publicId}')">
+            <span>🗑️</span>
+        </button>
+    `;
+
+    // Si es imagen, agregar preview
+    if (uploadResult.type.startsWith('image/')) {
+        const imgPreview = document.createElement('img');
+        imgPreview.src = uploadResult.url;
+        imgPreview.className = 'image-preview';
+        imgPreview.onclick = () => window.open(uploadResult.url, '_blank');
+        fileItem.appendChild(imgPreview);
+    }
+}
+
+// Función para actualizar preview con error
+function actualizarPreviewError(fileItem, error) {
+    fileItem.className = 'file-item error';
+    const statusDiv = fileItem.querySelector('.file-status');
+    statusDiv.innerHTML = `
+        <span class="error-icon">❌</span>
+        <span>Error: ${error}</span>
+    `;
+}
+
+// Función para actualizar estado final
+function actualizarEstadoFinal(uploadStatus) {
+    const successCount = uploadedFiles.length;
+    const totalItems = document.querySelectorAll('.file-item').length;
+    const errorCount = totalItems - successCount;
+
+    let statusMessage = '';
+    if (successCount > 0) {
+        statusMessage += `✅ ${successCount} archivo(s) subido(s) exitosamente`;
+    }
+    if (errorCount > 0) {
+        statusMessage += ` ❌ ${errorCount} archivo(s) con errores`;
+    }
+
+    uploadStatus.innerHTML = `<div class="upload-complete">${statusMessage}</div>`;
+}
+
+// Función para remover archivo
+async function removerArchivo(publicId) {
+    try {
+        // Remover de Cloudinary (opcional, requiere configuración adicional)
+        // Por ahora solo removemos de la interfaz y array local
+        
+        // Remover del array
+        uploadedFiles = uploadedFiles.filter(file => file.publicId !== publicId);
+        
+        // Remover del DOM
+        const fileItems = document.querySelectorAll('.file-item');
+        fileItems.forEach(item => {
+            const removeBtn = item.querySelector(`[onclick*="${publicId}"]`);
+            if (removeBtn) {
+                item.remove();
+            }
+        });
+        
+        // Actualizar estado
+        const uploadStatus = document.getElementById('uploadStatus');
+        actualizarEstadoFinal(uploadStatus);
+        
+        showMessage('Archivo removido exitosamente', 'success');
+    } catch (error) {
+        console.error('Error removiendo archivo:', error);
+        showMessage('Error al remover archivo', 'error');
+    }
+}
+
+// Función para obtener icono de archivo
+function obtenerIconoArchivo(type) {
+    if (type.startsWith('image/')) return '🖼️';
+    if (type === 'application/pdf') return '📄';
+    return '📎';
+}
+
+// Función para formatear tamaño de archivo
+function formatearTamanoArchivo(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 // Función para validar cédula dominicana (formato básico)
@@ -158,16 +406,21 @@ function validarFormulario(formData) {
         errores.push('La motivación es requerida');
     }
 
-    // ✅ CORRECCIÓN: Validación del checkbox de autorización
+    // Validación del checkbox de autorización
     if (!formData.autorizacion) {
         errores.push('Debe autorizar el uso de sus datos personales');
+    }
+
+    // Validación de archivos (opcional pero recomendado)
+    if (uploadedFiles.length === 0) {
+        errores.push('Se recomienda subir al menos un record de notas');
     }
 
     console.log('Errores encontrados:', errores);
     return errores;
 }
 
-// ✅ CORRECCIÓN: Función mejorada para recopilar datos del formulario
+// Función mejorada para recopilar datos del formulario
 function recopilarDatos() {
     const form = document.getElementById('solicitudForm');
     const datos = {};
@@ -176,7 +429,7 @@ function recopilarDatos() {
     const campos = form.querySelectorAll('input, select, textarea');
     
     campos.forEach(campo => {
-        if (campo.name) {
+        if (campo.name && campo.name !== 'recordsNotas') { // Excluir el input de archivos
             if (campo.type === 'checkbox') {
                 datos[campo.name] = campo.checked;
             } else if (campo.type === 'radio') {
@@ -184,9 +437,8 @@ function recopilarDatos() {
                     datos[campo.name] = campo.value;
                 }
             } else {
-                // CORRECCIÓN: Limpiar formato de números para campos de ingresos
+                // Limpiar formato de números para campos de ingresos
                 if (campo.id && (campo.id.includes('ingresos') || campo.id.includes('Ingresos'))) {
-                    // Remover comas y guardar solo el número
                     const numeroLimpio = campo.value.replace(/[^\d]/g, '');
                     datos[campo.name] = numeroLimpio ? parseInt(numeroLimpio, 10) : 0;
                 } else {
@@ -195,6 +447,10 @@ function recopilarDatos() {
             }
         }
     });
+    
+    // Agregar información de archivos subidos
+    datos.recordsNotas = uploadedFiles;
+    datos.totalArchivosSubidos = uploadedFiles.length;
     
     console.log('Datos recopilados:', datos);
     return datos;
@@ -305,8 +561,11 @@ async function manejarEnvio(event) {
                 'success'
             );
             
-            // Limpiar formulario
+            // Limpiar formulario y archivos
             document.getElementById('solicitudForm').reset();
+            uploadedFiles = [];
+            document.getElementById('filePreview').innerHTML = '';
+            document.getElementById('uploadStatus').style.display = 'none';
             
             // Scroll al inicio
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -375,37 +634,32 @@ function configurarFormateadores() {
         });
     }
 
-    // Formatear ingresos - VERSIÓN CORREGIDA
+    // Formatear ingresos
     const ingresosInputs = document.querySelectorAll('#ingresosPadre1, #ingresosPadre2');
     ingresosInputs.forEach(input => {
-    input.addEventListener('input', function(e) {
-        // Obtener solo los números del valor actual
-        let value = e.target.value.replace(/[^\d]/g, '');
+        input.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^\d]/g, '');
+            
+            if (value && value !== '0') {
+                const numericValue = parseInt(value, 10);
+                if (!isNaN(numericValue)) {
+                    e.target.value = numericValue.toLocaleString('es-DO');
+                }
+            } else if (value === '') {
+                e.target.value = '';
+            }
+        });
         
-        // Si hay valor numérico, formatearlo
-        if (value && value !== '0') {
-            // Convertir a número y formatear con comas
-            const numericValue = parseInt(value, 10);
-            if (!isNaN(numericValue)) {
-                e.target.value = numericValue.toLocaleString('es-DO');
+        input.addEventListener('blur', function(e) {
+            let value = e.target.value.replace(/[^\d]/g, '');
+            if (value && value !== '0') {
+                const numericValue = parseInt(value, 10);
+                if (!isNaN(numericValue)) {
+                    e.target.value = numericValue.toLocaleString('es-DO');
+                }
             }
-        } else if (value === '') {
-            // Si está vacío, dejarlo vacío
-            e.target.value = '';
-        }
+        });
     });
-    
-    // También manejar cuando el usuario sale del campo (blur)
-    input.addEventListener('blur', function(e) {
-        let value = e.target.value.replace(/[^\d]/g, '');
-        if (value && value !== '0') {
-            const numericValue = parseInt(value, 10);
-            if (!isNaN(numericValue)) {
-                e.target.value = numericValue.toLocaleString('es-DO');
-            }
-        }
-    });
-});
 }
 
 // Función para configurar validación en tiempo real
@@ -419,7 +673,6 @@ function configurarValidacionTiempoReal() {
         });
         
         input.addEventListener('input', function() {
-            // Remover estilos de error cuando el usuario empiece a escribir
             this.classList.remove('error');
             ocultarErrorCampo(this);
         });
@@ -432,7 +685,6 @@ function validarCampoIndividual(campo) {
     let esValido = true;
     let mensajeError = '';
 
-    // Validaciones específicas por tipo de campo
     if (campo.hasAttribute('required') && !valor) {
         esValido = false;
         mensajeError = 'Este campo es requerido';
@@ -453,7 +705,6 @@ function validarCampoIndividual(campo) {
         mensajeError = 'Índice debe estar entre 0 y 100';
     }
 
-    // Aplicar estilos visuales
     if (!esValido) {
         campo.classList.add('error');
         mostrarErrorCampo(campo, mensajeError);
@@ -467,7 +718,6 @@ function validarCampoIndividual(campo) {
 
 // Función para mostrar error en campo específico
 function mostrarErrorCampo(campo, mensaje) {
-    // Remover error anterior si existe
     ocultarErrorCampo(campo);
     
     const errorDiv = document.createElement('div');
@@ -490,7 +740,6 @@ function ocultarErrorCampo(campo) {
 
 // Función para configurar autocompletado inteligente
 function configurarAutocompletado() {
-    // Lista de universidades dominicanas populares
     const universidades = [
         'Universidad Autónoma de Santo Domingo (UASD)',
         'Pontificia Universidad Católica Madre y Maestra (PUCMM)',
@@ -504,13 +753,11 @@ function configurarAutocompletado() {
         'Universidad Católica Nordestana (UCNE)'
     ];
 
-    // Configurar autocompletado para universidad
     const universidadInput = document.getElementById('universidadDeseada');
     if (universidadInput) {
         configurarDatalist(universidadInput, universidades, 'universidades-list');
     }
 
-    // Lista de carreras populares
     const carreras = [
         'Medicina',
         'Ingeniería Civil',
@@ -534,7 +781,6 @@ function configurarAutocompletado() {
         'Economía'
     ];
 
-    // Configurar autocompletado para carrera
     const carreraInput = document.getElementById('carreraDeseada');
     if (carreraInput) {
         configurarDatalist(carreraInput, carreras, 'carreras-list');
@@ -543,7 +789,6 @@ function configurarAutocompletado() {
 
 // Función auxiliar para configurar datalist
 function configurarDatalist(input, opciones, listId) {
-    // Crear datalist si no existe
     let datalist = document.getElementById(listId);
     if (!datalist) {
         datalist = document.createElement('datalist');
@@ -551,14 +796,12 @@ function configurarDatalist(input, opciones, listId) {
         document.body.appendChild(datalist);
     }
 
-    // Agregar opciones
     opciones.forEach(opcion => {
         const option = document.createElement('option');
         option.value = opcion;
         datalist.appendChild(option);
     });
 
-    // Asociar con el input
     input.setAttribute('list', listId);
 }
 
@@ -568,13 +811,11 @@ function configurarNavegacionTeclado() {
     
     if (form) {
         form.addEventListener('keydown', function(e) {
-            // Ctrl + Enter para enviar
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
                 form.dispatchEvent(new Event('submit'));
             }
             
-            // Escape para limpiar campo actual
             if (e.key === 'Escape') {
                 if (document.activeElement.tagName === 'INPUT' || 
                     document.activeElement.tagName === 'TEXTAREA') {
@@ -621,7 +862,6 @@ function inicializar() {
     try {
         console.log('🔥 Iniciando configuración de Firebase...');
         
-        // Verificar que Firebase se haya inicializado correctamente
         if (!app) {
             console.error('❌ Error: Firebase app no se inicializó correctamente');
             showMessage('Error de configuración del sistema. Contacte al administrador.', 'error');
@@ -638,7 +878,6 @@ function inicializar() {
         console.log('📱 App:', app);
         console.log('🗄️ Database:', db);
         
-        // Configurar event listeners
         const form = document.getElementById('solicitudForm');
         if (form) {
             form.addEventListener('submit', manejarEnvio);
@@ -646,6 +885,13 @@ function inicializar() {
         } else {
             console.error('❌ Error: No se encontró el formulario con ID "solicitudForm"');
             return;
+        }
+
+        // Configurar event listener para subida de archivos
+        const fileInput = document.getElementById('recordsNotas');
+        if (fileInput) {
+            fileInput.addEventListener('change', manejarSeleccionArchivos);
+            console.log('✅ Event listener de archivos configurado');
         }
 
         // Configurar formateadores
@@ -668,7 +914,6 @@ function inicializar() {
 
         console.log('🎉 Formulario FUTRAVIF inicializado correctamente');
         
-        // Mostrar mensaje de éxito en la inicialización
         showMessage('Sistema cargado correctamente. Puede llenar el formulario.', 'success');
         
     } catch (error) {
@@ -676,6 +921,9 @@ function inicializar() {
         showMessage('Error crítico del sistema. Recargue la página.', 'error');
     }
 }
+
+// Hacer función removerArchivo disponible globalmente
+window.removerArchivo = removerArchivo;
 
 // Inicializar cuando el DOM esté listo
 if (document.readyState === 'loading') {

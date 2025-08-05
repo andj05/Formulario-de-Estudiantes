@@ -91,6 +91,36 @@
                     </div>
                 </section>
 
+                <!-- Nueva Sección: Records de Notas -->
+                <section class="form-section">
+                    <h3>Records de Notas y Documentos Académicos</h3>
+                    <p style="margin-bottom: 20px; color: #666; font-size: 0.9em;">
+                        Sube tus records de notas, certificados o cualquier documento académico relevante. 
+                        Se aceptan archivos en formato JPG, PNG y PDF (máximo 10MB por archivo).
+                    </p>
+                    
+                    <div class="file-upload-section" id="fileUploadSection">
+                        <label for="recordsNotas" class="file-upload-label">
+                            <div class="file-upload-icon">📎</div>
+                            <div class="file-upload-text">Haz clic aquí para seleccionar archivos</div>
+                            <div class="file-upload-text">o arrastra y suelta los archivos</div>
+                            <div class="file-upload-hint">Formatos permitidos: JPG, PNG, PDF • Máximo 10MB por archivo</div>
+                        </label>
+                        <input type="file" 
+                               id="recordsNotas" 
+                               name="recordsNotas" 
+                               class="file-input"
+                               multiple 
+                               accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+                    </div>
+
+                    <!-- Estado de subida -->
+                    <div id="uploadStatus"></div>
+
+                    <!-- Preview de archivos subidos -->
+                    <div id="filePreview"></div>
+                </section>
+
                 <!-- Información de los Padres -->
                 <section class="form-section">
                     <h3>Información de los Padres o Tutores</h3>
@@ -200,4 +230,70 @@
         </footer>
     </div>
 
-<script type="module" src="script.js"></script>
+    <!-- Script para funcionalidad de drag and drop -->
+    <script>
+        // Funcionalidad de drag and drop
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileUploadSection = document.getElementById('fileUploadSection');
+            const fileInput = document.getElementById('recordsNotas');
+
+            // Prevenir comportamiento por defecto del navegador
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                fileUploadSection.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // Resaltar la zona de drop
+            ['dragenter', 'dragover'].forEach(eventName => {
+                fileUploadSection.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                fileUploadSection.addEventListener(eventName, unhighlight, false);
+            });
+
+            // Manejar archivos soltados
+            fileUploadSection.addEventListener('drop', handleDrop, false);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight(e) {
+                fileUploadSection.classList.add('dragover');
+            }
+
+            function unhighlight(e) {
+                fileUploadSection.classList.remove('dragover');
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                // Asignar archivos al input
+                fileInput.files = files;
+                
+                // Disparar evento change
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+
+            // Limpiar formulario y archivos al hacer reset
+            document.getElementById('solicitudForm').addEventListener('reset', function() {
+                setTimeout(() => {
+                    document.getElementById('filePreview').innerHTML = '';
+                    document.getElementById('uploadStatus').style.display = 'none';
+                    // Limpiar array de archivos subidos (se hará en el script principal)
+                    if (window.uploadedFiles) {
+                        window.uploadedFiles = [];
+                    }
+                }, 100);
+            });
+        });
+    </script>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
